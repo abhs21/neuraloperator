@@ -10,6 +10,10 @@ class OptimizationConfig(ConfigBase):
     weight_decay: float = 1e-4
     eval_interval: int = 1
     mixed_precision: bool = False
+    # Keep the historical fast default for general training. PINO overrides
+    # this to False because TF32 can change the numerical trajectory across
+    # GPU architectures.
+    allow_tf32: bool = True
     scheduler: Literal["StepLR", "ReduceLROnPlateau", "CosineAnnealingLR"] = "StepLR"
     scheduler_T_max: int = 500
     scheduler_patience: int = 50
