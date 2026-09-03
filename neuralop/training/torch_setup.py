@@ -2,6 +2,57 @@ import torch
 import neuralop.mpu.comm as comm
 
 
+def set_tf32(allow_tf32: bool):
+    """Configure float32 math precision consistently across PyTorch versions.
+
+    Parameters
+    ----------
+    allow_tf32 : bool
+        Whether float32 matrix multiplications and cuDNN convolutions may use
+        TensorFloat-32. ``False`` selects IEEE float32 math and is the safer
+        choice for reproducible physics-informed training.
+
+    Notes
+    -----
+    PyTorch 2.9 introduced the ``torch.backends.fp32_precision`` API and is
+    deprecating the older ``allow_tf32`` flags. Older PyTorch releases use
+    the legacy flags, so this helper keeps the training scripts compatible
+    with both APIs without mixing them on newer releases.
+    """
+    if not isinstance(allow_tf32, bool):
+        raise TypeError(f"allow_tf32 must be a bool, got {type(allow_tf32).__name__}")
+
+    precision = "tf32" if allow_tf32 else "ieee"
+
+    # PyTorch >= 2.9: use the new global precision policy. Setting the global
+    # policy also covers CUDA matmuls and cuDNN operators without combining
+    # the new API with the deprecated per-backend flags.
+    if hasattr(torch.backends, "fp32_precision"):
+        try:
+            torch.backends.fp32_precision = precision
+        except (AttributeError, RuntimeError):
+            # A partially backported build may expose the attribute without
+            # supporting assignment. Fall through to the legacy API.
+            pass
+        else:
+            return
+
+    # PyTorch < 2.9: set the matmul policy and the separate cuDNN flag.
+    try:
+        torch.set_float32_matmul_precision("high" if allow_tf32 else "highest")
+    except AttributeError:
+        pass
+
+    cuda_backends = getattr(torch.backends, "cuda", None)
+    cuda_matmul = getattr(cuda_backends, "matmul", None)
+    if cuda_matmul is not None:
+        cuda_matmul.allow_tf32 = allow_tf32
+
+    cudnn = getattr(torch.backends, "cudnn", None)
+    if cudnn is not None:
+        cudnn.allow_tf32 = allow_tf32
+
+
 def setup(config):
     """A convenience function to intialize the device, setup torch settings and
     check multi-grid and other values. It sets up distributed communitation, if used.
@@ -12,6 +63,7 @@ def setup(config):
         this function checks:
         * config.distributed (use_distributed, seed)
         * config.data (n_train, batch_size, test_batch_sizes, n_tests, test_resolutions)
+        * config.opt (allow_tf32)
 
     Returns
     -------
@@ -65,10 +117,7 @@ def setup(config):
         if seed is not None:
             torch.cuda.manual_seed(seed)
         increase_l2_fetch_granularity()
-        try:
-            torch.set_float32_matmul_precision("high")
-        except AttributeError:
-            pass
+        set_tf32(config.opt.get("allow_tf32", True))
 
         torch.backends.cudnn.benchmark = True
 
