@@ -108,3 +108,37 @@ def test_gno_block(
     if batch_size > 1 and gno_transform_type != "linear":
         # assert f_y[1:] accumulates no grad if it's used
         assert not f_y.grad[1:].nonzero().any()
+
+
+@pytest.mark.parametrize("reduction", ["sum", "mean"])
+@pytest.mark.parametrize("transform_type", ["linear", "nonlinear"])
+def test_gno_block_chunked_forward(reduction, transform_type):
+    torch.manual_seed(0)
+    gno_block = GNOBlock(
+        in_channels=in_channels,
+        out_channels=out_channels,
+        coord_dim=2,
+        pos_embedding_type=None,
+        radius=10.0,
+        reduction=reduction,
+        transform_type=transform_type,
+        channel_mlp_layers=[16, 16],
+        use_torch_scatter_reduce=False,
+        use_open3d_neighbor_search=False,
+    )
+    input_geom = torch.rand(12, 2)
+    output_queries = torch.rand(9, 2)
+    f_y = None
+    if transform_type == "nonlinear":
+        f_y = torch.rand(2, 12, in_channels, requires_grad=True)
+
+    expected = gno_block(input_geom, output_queries, f_y=f_y)
+    actual = gno_block.chunked_forward(
+        input_geom, output_queries, f_y=f_y, chunk_size=7
+    )
+
+    assert torch.allclose(actual, expected)
+    actual.sum().backward()
+    if f_y is not None:
+        assert f_y.grad is not None
+        assert f_y.grad.isfinite().all()
