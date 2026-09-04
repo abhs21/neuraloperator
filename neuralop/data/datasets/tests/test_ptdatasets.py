@@ -6,6 +6,7 @@ from pathlib import Path
 import os
 import shutil
 
+import torch
 import pytest
 
 test_data_dir = Path("./dataset_test")
@@ -75,3 +76,29 @@ def test_NSDownload():
     assert dataset.test_dbs
     assert dataset.data_processor
     shutil.rmtree(test_data_dir)
+
+
+def test_NSExplicitPaths(tmp_path):
+    train_path = tmp_path / "nsforcing_128_train.pt"
+    test_path = tmp_path / "nsforcing_128_test.pt"
+    train_data = {"x": torch.randn(2, 128, 128), "y": torch.randn(2, 128, 128)}
+    test_data = {"x": torch.randn(1, 128, 128), "y": torch.randn(1, 128, 128)}
+    torch.save(train_data, train_path)
+    torch.save(test_data, test_path)
+
+    dataset = NavierStokesDataset(
+        root_dir=tmp_path,
+        n_train=2,
+        n_tests=[1],
+        batch_size=1,
+        test_batch_sizes=[1],
+        train_resolution=128,
+        test_resolutions=[128],
+        encode_output=False,
+        download=True,
+        train_path=train_path,
+        test_paths=[test_path],
+    )
+
+    assert len(dataset.train_db) == 2
+    assert len(dataset.test_dbs[128]) == 1
