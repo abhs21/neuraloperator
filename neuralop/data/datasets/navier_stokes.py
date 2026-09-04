@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Union, List
+from typing import Union, List, Optional
 
 from torch.utils.data import DataLoader
 
@@ -52,6 +52,12 @@ class NavierStokesDataset(PTDataset):
         rate at which to subsample each input dimension, by default None
     download : bool, optional
         whether to download data if not present, by default True
+    train_path : Union[Path, str], optional
+        Path to the training data file. If provided, this path is used instead of the
+        default filename constructed from ``root_dir`` and ``train_resolution``.
+    test_paths : List[Union[Path, str]], optional
+        Paths to the test data files, in the same order as ``test_resolutions``. If
+        provided, these paths are used instead of the default filenames.
 
     Attributes
     ----------
@@ -76,6 +82,8 @@ class NavierStokesDataset(PTDataset):
         channel_dim=1,
         subsampling_rate=None,
         download: bool = True,
+        train_path: Optional[Union[Path, str]] = None,
+        test_paths: Optional[List[Union[Path, str]]] = None,
     ):
         """Initialize the NavierStokesDataset.
 
@@ -101,7 +109,9 @@ class NavierStokesDataset(PTDataset):
             ), f"Error: resolution {res} not available"
 
         # download darcy data from zenodo archive if passed
-        if download:
+        # Explicit paths refer to files supplied by the caller and should not trigger
+        # a download of the conventionally named archive files.
+        if download and train_path is None and test_paths is None:
             files_to_download = []
             already_downloaded_files = [x.name for x in root_dir.iterdir()]
             for res in resolutions:
@@ -132,6 +142,8 @@ class NavierStokesDataset(PTDataset):
             channel_dim=channel_dim,
             input_subsampling_rate=subsampling_rate,
             output_subsampling_rate=subsampling_rate,
+            train_path=train_path,
+            test_paths=test_paths,
         )
 
 
