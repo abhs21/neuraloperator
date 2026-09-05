@@ -108,23 +108,28 @@ class NavierStokesDataset(PTDataset):
                 res in available_resolutions
             ), f"Error: resolution {res} not available"
 
-        # download darcy data from zenodo archive if passed
-        # Explicit paths refer to files supplied by the caller and should not trigger
-        # a download of the conventionally named archive files.
-        if download and train_path is None and test_paths is None:
+        if download:
             files_to_download = []
             already_downloaded_files = [x.name for x in root_dir.iterdir()]
             for res in resolutions:
-                if (
-                    f"nsforcing_train_{res}.pt" not in already_downloaded_files
-                    or f"nsforcing_test_{res}.pt" not in already_downloaded_files
-                ):
+                needs_train = (
+                    train_path is None
+                    and res == train_resolution
+                    and f"nsforcing_train_{res}.pt" not in already_downloaded_files
+                )
+                needs_test = (
+                    test_paths is None
+                    and res in test_resolutions
+                    and f"nsforcing_test_{res}.pt" not in already_downloaded_files
+                )
+                if needs_train or needs_test:
                     files_to_download.append(f"nsforcing_{res}.tgz")
-            download_from_zenodo_record(
-                record_id=zenodo_record_id,
-                root=root_dir,
-                files_to_download=files_to_download,
-            )
+            if files_to_download:
+                download_from_zenodo_record(
+                    record_id=zenodo_record_id,
+                    root=root_dir,
+                    files_to_download=files_to_download,
+                )
 
         # once downloaded/if files already exist, init PTDataset
         super().__init__(
