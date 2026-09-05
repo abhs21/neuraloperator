@@ -24,20 +24,14 @@ def set_tf32(allow_tf32: bool):
 
     precision = "tf32" if allow_tf32 else "ieee"
 
-    # PyTorch >= 2.9: use the new global precision policy. Setting the global
-    # policy also covers CUDA matmuls and cuDNN operators without combining
-    # the new API with the deprecated per-backend flags.
     if hasattr(torch.backends, "fp32_precision"):
-        try:
-            torch.backends.fp32_precision = precision
-        except (AttributeError, RuntimeError):
-            # A partially backported build may expose the attribute without
-            # supporting assignment. Fall through to the legacy API.
-            pass
-        else:
-            return
+        torch.backends.fp32_precision = precision
+        torch.backends.cuda.matmul.fp32_precision = precision
+        torch.backends.cudnn.fp32_precision = precision
+        torch.backends.cudnn.conv.fp32_precision = precision
+        torch.backends.cudnn.rnn.fp32_precision = precision
+        return
 
-    # PyTorch < 2.9: set the matmul policy and the separate cuDNN flag.
     try:
         torch.set_float32_matmul_precision("high" if allow_tf32 else "highest")
     except AttributeError:
