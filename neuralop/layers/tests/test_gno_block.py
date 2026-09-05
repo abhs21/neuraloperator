@@ -111,8 +111,9 @@ def test_gno_block(
 
 
 @pytest.mark.parametrize("reduction", ["sum", "mean"])
-@pytest.mark.parametrize("transform_type", ["linear", "nonlinear"])
-def test_gno_block_chunked_forward(reduction, transform_type):
+@pytest.mark.parametrize("transform_type", ["linear", "nonlinear", "nonlinear_kernelonly"])
+@pytest.mark.parametrize("batch_size", [None, 1, 2])
+def test_gno_block_chunked_forward(reduction, transform_type, batch_size):
     torch.manual_seed(0)
     gno_block = GNOBlock(
         in_channels=in_channels,
@@ -126,11 +127,10 @@ def test_gno_block_chunked_forward(reduction, transform_type):
         use_torch_scatter_reduce=False,
         use_open3d_neighbor_search=False,
     )
-    input_geom = torch.rand(12, 2)
-    output_queries = torch.rand(9, 2)
-    f_y = None
-    if transform_type == "nonlinear":
-        f_y = torch.rand(2, 12, in_channels, requires_grad=True)
+    input_geom = torch.rand(12, 2, requires_grad=True)
+    output_queries = torch.rand(9, 2, requires_grad=True)
+    shape = (12, in_channels) if batch_size is None else (batch_size, 12, in_channels)
+    f_y = torch.rand(shape, requires_grad=True)
 
     expected = gno_block(input_geom, output_queries, f_y=f_y)
     actual = gno_block.chunked_forward(
@@ -138,7 +138,8 @@ def test_gno_block_chunked_forward(reduction, transform_type):
     )
 
     assert torch.allclose(actual, expected)
-    actual.sum().backward()
-    if f_y is not None:
-        assert f_y.grad is not None
-        assert f_y.grad.isfinite().all()
+    inputs = (input_geom, output_queries, f_y, *gno_block.parameters())
+    expected_grads = torch.autograd.grad(expected.sum(), inputs)
+    actual_grads = torch.autograd.grad(actual.sum(), inputs)
+    for actual_grad, expected_grad in zip(actual_grads, expected_grads):
+        torch.testing.assert_close(actual_grad, expected_grad)
