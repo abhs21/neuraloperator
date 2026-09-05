@@ -1,6 +1,7 @@
 from ..burgers import Burgers1dTimeDataset
 from ..darcy import DarcyDataset
 from ..navier_stokes import NavierStokesDataset
+from .. import navier_stokes
 from pathlib import Path
 
 import os
@@ -100,5 +101,36 @@ def test_NSExplicitPaths(tmp_path):
         test_paths=[test_path],
     )
 
+    assert len(dataset.train_db) == 2
+    assert len(dataset.test_dbs[128]) == 1
+
+
+@pytest.mark.parametrize("explicit_split", ["train", "test"])
+def test_NSPartialExplicitPaths(tmp_path, monkeypatch, explicit_split):
+    data = {"x": torch.randn(2, 128, 128), "y": torch.randn(2, 128, 128)}
+    explicit_path = tmp_path / "custom.pt"
+    torch.save(data, explicit_path)
+    missing_split = "test" if explicit_split == "train" else "train"
+    downloads = []
+
+    def download(record_id, root, files_to_download):
+        downloads.extend(files_to_download)
+        torch.save(data, root / f"nsforcing_{missing_split}_128.pt")
+
+    monkeypatch.setattr(navier_stokes, "download_from_zenodo_record", download)
+    dataset = NavierStokesDataset(
+        root_dir=tmp_path,
+        n_train=2,
+        n_tests=[1],
+        batch_size=1,
+        test_batch_sizes=[1],
+        train_resolution=128,
+        test_resolutions=[128],
+        encode_output=False,
+        train_path=explicit_path if explicit_split == "train" else None,
+        test_paths=[explicit_path] if explicit_split == "test" else None,
+    )
+
+    assert downloads == ["nsforcing_128.tgz"]
     assert len(dataset.train_db) == 2
     assert len(dataset.test_dbs[128]) == 1
