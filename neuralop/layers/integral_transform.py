@@ -230,8 +230,9 @@ class IntegralTransform(nn.Module):
         """Compute the kernel integral transform in chunks of neighbor messages.
 
         This method is mathematically equivalent to :meth:`forward` for sum and mean
-        reductions, but limits the number of edge messages materialized at once. It is
-        useful when a dense neighborhood graph does not fit comfortably in memory.
+        reductions, but limits the number of edge messages computed per chunk.
+        The neighborhood graph is still constructed in full, and autograd can
+        retain activations from every chunk during training.
 
         Parameters
         ----------
@@ -264,8 +265,6 @@ class IntegralTransform(nn.Module):
             if f_y.ndim == 3:
                 batched = True
                 batch_size = f_y.shape[0]
-            elif f_y.ndim == 2:
-                in_features = f_y[neighbor_indices]
 
         nbr_weights = neighbors.get("weights")
         if nbr_weights is None:
@@ -284,6 +283,9 @@ class IntegralTransform(nn.Module):
             edge_indices = neighbor_indices[edge_slice]
             edge_destination = destination[edge_slice]
 
+            if f_y is not None:
+                in_features = f_y[:, edge_indices, :] if batched else f_y[edge_indices]
+
             rep_features = y[edge_indices]
             self_features = x[edge_destination]
             agg_features = torch.cat([rep_features, self_features], dim=-1)
@@ -292,7 +294,6 @@ class IntegralTransform(nn.Module):
                 "nonlinear",
             ):
                 if batched:
-                    in_features = f_y[:, edge_indices, :]
                     agg_features = agg_features.repeat(
                         [batch_size] + [1] * agg_features.ndim
                     )
@@ -301,8 +302,6 @@ class IntegralTransform(nn.Module):
             rep_features = self.channel_mlp(agg_features)
 
             if f_y is not None and self.transform_type != "nonlinear_kernelonly":
-                if f_y.ndim == 3:
-                    in_features = f_y[:, edge_indices, :]
                 if rep_features.ndim == 2 and batched:
                     rep_features = rep_features.unsqueeze(0).repeat(
                         [batch_size] + [1] * rep_features.ndim
