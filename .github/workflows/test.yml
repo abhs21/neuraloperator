@@ -1,6 +1,9 @@
 name: Test neuralop
 
-on: [push, pull_request]
+on:
+  push:
+    branches-ignore: ["tmlr-lean-audit"]
+  pull_request:
 
 jobs:
   build:
