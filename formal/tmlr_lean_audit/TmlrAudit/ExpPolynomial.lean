@@ -140,8 +140,7 @@ theorem expSum_zero_set_finite_and_ncard_le {α : Type*} [DecidableEq α]
           calc
             Set.ncard {x | g x = 0} ≤ Set.ncard {x | g' x = 0} + 1 := hgcard
             _ ≤ (s.card - 1) + 1 := by
-              gcongr
-              simpa [g'] using hdcard
+              simpa [g'] using Nat.add_le_add_right hdcard 1
             _ = (insert a s).card - 1 := by
               have hspos : 0 < s.card := hs.card_pos
               rw [Finset.card_insert_of_notMem ha]
