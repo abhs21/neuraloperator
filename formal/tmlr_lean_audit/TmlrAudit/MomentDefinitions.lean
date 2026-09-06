@@ -4,6 +4,7 @@ import Mathlib.LinearAlgebra.Vandermonde
 namespace TmlrAudit
 
 open scoped BigOperators
+noncomputable section
 
 /-- The prescribed menu `β_j = 1 + j/M`. -/
 def betaMenu {M : ℕ} (j : Fin M) : ℝ :=
@@ -26,10 +27,11 @@ lemma det_vandermonde_ne_zero_of_injective {M : ℕ} (q : Fin M → ℝ)
     (hq : Function.Injective q) :
     (Matrix.vandermonde q).det ≠ 0 := by
   rw [Matrix.det_vandermonde]
-  simp only [Finset.prod_eq_zero_iff, not_exists, sub_eq_zero]
-  intro i
-  intro j hj hji
-  exact (Finset.mem_Ioi.mp hj).ne' (hq hji)
+  refine Finset.prod_ne_zero_iff.mpr ?_
+  intro i _hi
+  refine Finset.prod_ne_zero_iff.mpr ?_
+  intro j hj
+  exact sub_ne_zero.mpr (hq.ne (Finset.mem_Ioi.mp hj).ne')
 
 /-- Injectivity of the base coordinates is preserved by the exponential node map. -/
 lemma momentNode_injective {M : ℕ} (hM : 0 < M) (a : Fin M → ℝ)
@@ -39,8 +41,7 @@ lemma momentNode_injective {M : ℕ} (hM : 0 < M) (a : Fin M → ℝ)
   apply ha
   have hdiv : a i / (M : ℝ) = a j / (M : ℝ) := Real.exp_injective hij
   have hM0 : (M : ℝ) ≠ 0 := by exact_mod_cast (Nat.ne_of_gt hM)
-  apply (div_left_inj' hM0).mp
-  simpa using hdiv
+  exact (div_right_inj hM0).mp hdiv
 
 /-- The middle Vandermonde factor in the Jacobian is nonsingular. -/
 lemma momentNode_vandermonde_det_ne_zero {M : ℕ} (hM : 0 < M) (a : Fin M → ℝ)
@@ -51,7 +52,7 @@ lemma momentNode_vandermonde_det_ne_zero {M : ℕ} (hM : 0 < M) (a : Fin M → �
 /-- Exact factorization `J = diag(β) * vandermonde(q)^T * diag(exp(a))`. -/
 lemma momentJacobian_factorization {M : ℕ} (a : Fin M → ℝ) :
     momentJacobian a =
-      Matrix.diagonal betaMenu * (Matrix.vandermonde (momentNode a))ᵀ *
+      Matrix.diagonal betaMenu * Matrix.transpose (Matrix.vandermonde (momentNode a)) *
         Matrix.diagonal (fun l => Real.exp (a l)) := by
   classical
   ext j l
@@ -77,7 +78,7 @@ theorem momentJacobian_det_ne_zero {M : ℕ} (hM : 0 < M) (a : Fin M → ℝ)
     exact Finset.prod_ne_zero_iff.mpr (by
       intro j _hj
       exact hβ j)
-  have hV : ((Matrix.vandermonde (momentNode a))ᵀ).det ≠ 0 := by
+  have hV : (Matrix.transpose (Matrix.vandermonde (momentNode a))).det ≠ 0 := by
     rw [Matrix.det_transpose]
     exact momentNode_vandermonde_det_ne_zero hM a ha
   have hDa : (Matrix.diagonal (fun l : Fin M => Real.exp (a l)) :
@@ -89,4 +90,5 @@ theorem momentJacobian_det_ne_zero {M : ℕ} (hM : 0 < M) (a : Fin M → ℝ)
   rw [momentJacobian_factorization, Matrix.det_mul, Matrix.det_mul]
   exact mul_ne_zero (mul_ne_zero hDβ hV) hDa
 
+end
 end TmlrAudit
