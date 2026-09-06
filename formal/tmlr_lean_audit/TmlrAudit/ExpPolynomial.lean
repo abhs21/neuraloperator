@@ -19,9 +19,9 @@ lemma hasDerivAt_expSum {α : Type*} [DecidableEq α]
   unfold expSum
   apply HasDerivAt.fun_sum
   intro i _hi
-  convert HasDerivAt.const_mul (c i)
-    ((Real.hasDerivAt_exp (lam i * x)).comp x (hasDerivAt_const_mul (lam i))) using 1 <;>
-    try ring
+  simpa only [Function.comp_apply, mul_assoc, mul_comm, mul_left_comm] using
+    HasDerivAt.const_mul (c i)
+      ((Real.hasDerivAt_exp (lam i * x)).comp x (hasDerivAt_const_mul (lam i)))
 
 lemma continuous_expSum {α : Type*} [DecidableEq α]
     (I : Finset α) (c lam : α → ℝ) :
@@ -78,12 +78,12 @@ lemma hasDerivAt_normalizedExpSum {α : Type*} [DecidableEq α]
       (∑ i ∈ s, c i * (lam i - lam a) * Real.exp ((lam i - lam a) * x)) x := by
     apply HasDerivAt.fun_sum
     intro i _hi
-    convert HasDerivAt.const_mul (c i)
-      ((Real.hasDerivAt_exp ((lam i - lam a) * x)).comp x
-        (hasDerivAt_const_mul (lam i - lam a))) using 1 <;>
-      try ring
-  convert (hasDerivAt_const x (c a)).add hsum using 1 <;>
-    try ring
+    simpa only [Function.comp_apply, mul_assoc, mul_comm, mul_left_comm] using
+      HasDerivAt.const_mul (c i)
+        ((Real.hasDerivAt_exp ((lam i - lam a) * x)).comp x
+          (hasDerivAt_const_mul (lam i - lam a)))
+  simpa only [Pi.add_apply, zero_add, mul_assoc] using
+    (hasDerivAt_const x (c a)).add hsum
 
 /-- A nonzero finite sum of exponentials with distinct exponents has at most one fewer
 real zero than the number of terms. This is the manuscript's Lemma A.1 in finite-set form. -/
@@ -145,7 +145,8 @@ theorem expSum_zero_set_finite_and_ncard_le {α : Type*} [DecidableEq α]
               simpa [g'] using hdcard
             _ = (insert a s).card - 1 := by
               have hspos : 0 < s.card := hs.card_pos
-              simp [ha]
+              simp only [Finset.card_insert_of_notMem ha]
+              omega
       · have hs0 : s = ∅ := Finset.not_nonempty_iff_eq_empty.mp hs
         subst s
         have hca : c a ≠ 0 := hc a (by simp)
