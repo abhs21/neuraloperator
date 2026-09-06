@@ -21,6 +21,7 @@ jobs:
         with:
           path: formal/tmlr_lean_audit/.lake/packages
           key: tmlr-lean-v4321-packages
+          save-always: true
       - name: Bootstrap Lean and generate Lake manifest
         run: |
           curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
