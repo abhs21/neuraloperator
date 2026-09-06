@@ -82,8 +82,7 @@ lemma hasDerivAt_normalizedExpSum {α : Type*} [DecidableEq α]
       HasDerivAt.const_mul (c i)
         ((Real.hasDerivAt_exp ((lam i - lam a) * x)).comp x
           (hasDerivAt_const_mul (lam i - lam a)))
-  simpa only [Pi.add_apply, zero_add, mul_assoc] using
-    (hasDerivAt_const x (c a)).add hsum
+  exact hsum.const_add (c a)
 
 /-- A nonzero finite sum of exponentials with distinct exponents has at most one fewer
 real zero than the number of terms. This is the manuscript's Lemma A.1 in finite-set form. -/
@@ -145,7 +144,7 @@ theorem expSum_zero_set_finite_and_ncard_le {α : Type*} [DecidableEq α]
               simpa [g'] using hdcard
             _ = (insert a s).card - 1 := by
               have hspos : 0 < s.card := hs.card_pos
-              simp only [Finset.card_insert_of_notMem ha]
+              rw [Finset.card_insert_of_notMem ha]
               omega
       · have hs0 : s = ∅ := Finset.not_nonempty_iff_eq_empty.mp hs
         subst s
