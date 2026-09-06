@@ -62,10 +62,13 @@ lemma momentJacobian_factorization {M : ℕ} (a : Fin M → ℝ) :
   simp only [Matrix.mul_diagonal, Matrix.diagonal_mul, Matrix.transpose_apply,
     Matrix.vandermonde_apply]
   simp only [momentJacobian, momentNode]
-  rw [← Real.exp_nat_mul, ← Real.exp_add]
+  rw [← Real.exp_nat_mul]
+  rw [mul_assoc, ← Real.exp_add]
   congr 2
+  have hM : 0 < M := Nat.zero_lt_of_lt j.isLt
+  have hM0 : (M : ℝ) ≠ 0 := by exact_mod_cast (Nat.ne_of_gt hM)
   dsimp [betaMenu]
-  field_simp
+  field_simp [hM0]
   ring
 
 /-- Nonsingularity of the Jacobian at every injective base vector. -/
