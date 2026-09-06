@@ -1,0 +1,29 @@
+name: TMLR Lean Audit
+
+on:
+  push:
+    branches: ["tmlr-lean-audit"]
+    paths:
+      - "formal/tmlr_lean_audit/**"
+      - ".github/workflows/tmlr-lean-audit.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        env:
+          LEAN_NUM_THREADS: "1"
+        with:
+          lake-package-directory: formal/tmlr_lean_audit
+          build: "true"
+          test: "false"
+          lint: "false"
+          use-mathlib-cache: "true"
+          leanchecker: "true"
+          nanoda: "true"
+          nanoda-allow-sorry: "false"
+          axiom-audit: "true"
+          axiom-audit-root: TmlrAudit
