@@ -41,7 +41,10 @@ lemma momentNode_injective {M : ℕ} (hM : 0 < M) (a : Fin M → ℝ)
   apply ha
   have hdiv : a i / (M : ℝ) = a j / (M : ℝ) := Real.exp_injective hij
   have hM0 : (M : ℝ) ≠ 0 := by exact_mod_cast (Nat.ne_of_gt hM)
-  exact (div_right_inj hM0).mp hdiv
+  calc
+    a i = (a i / (M : ℝ)) * (M : ℝ) := (div_mul_cancel₀ _ hM0).symm
+    _ = (a j / (M : ℝ)) * (M : ℝ) := by rw [hdiv]
+    _ = a j := div_mul_cancel₀ _ hM0
 
 /-- The middle Vandermonde factor in the Jacobian is nonsingular. -/
 lemma momentNode_vandermonde_det_ne_zero {M : ℕ} (hM : 0 < M) (a : Fin M → ℝ)
@@ -56,10 +59,13 @@ lemma momentJacobian_factorization {M : ℕ} (a : Fin M → ℝ) :
         Matrix.diagonal (fun l => Real.exp (a l)) := by
   classical
   ext j l
-  simp [momentJacobian, Matrix.mul_apply, momentNode]
+  simp only [Matrix.mul_diagonal, Matrix.diagonal_mul, Matrix.transpose_apply,
+    Matrix.vandermonde_apply]
+  simp only [momentJacobian, momentNode]
   rw [← Real.exp_nat_mul, ← Real.exp_add]
   congr 2
   dsimp [betaMenu]
+  field_simp
   ring
 
 /-- Nonsingularity of the Jacobian at every injective base vector. -/
