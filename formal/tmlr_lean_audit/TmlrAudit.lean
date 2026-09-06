@@ -3,3 +3,4 @@ import TmlrAudit.GrowthCore
 import TmlrAudit.ScoreCore
 import TmlrAudit.MomentDefinitions
 import TmlrAudit.RolleCore
+import TmlrAudit.ExpPolynomial
