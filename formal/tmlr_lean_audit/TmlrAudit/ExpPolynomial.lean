@@ -17,10 +17,11 @@ lemma hasDerivAt_expSum {α : Type*} [DecidableEq α]
     HasDerivAt (expSum I c lam)
       (∑ i ∈ I, c i * lam i * Real.exp (lam i * x)) x := by
   unfold expSum
-  convert HasDerivAt.fun_sum (u := I) (x := x) (fun i _hi =>
-    HasDerivAt.const_mul (c i)
-      ((Real.hasDerivAt_exp (lam i * x)).comp x (hasDerivAt_const_mul (lam i)))) using 1 <;>
-    simp [mul_assoc, mul_left_comm, mul_comm]
+  apply HasDerivAt.fun_sum
+  intro i _hi
+  convert HasDerivAt.const_mul (c i)
+    ((Real.hasDerivAt_exp (lam i * x)).comp x (hasDerivAt_const_mul (lam i))) using 1 <;>
+    try ring
 
 lemma continuous_expSum {α : Type*} [DecidableEq α]
     (I : Finset α) (c lam : α → ℝ) :
@@ -43,7 +44,8 @@ lemma normalizedExpSum_eq_factor {α : Type*} [DecidableEq α]
   congr 1
   · have hexp : Real.exp (-lam a * x) * Real.exp (lam a * x) = 1 := by
       rw [← Real.exp_add]
-      convert Real.exp_zero using 1 <;> ring
+      have harg : -lam a * x + lam a * x = 0 := by ring
+      rw [harg, Real.exp_zero]
     calc
       c a = c a * 1 := by simp
       _ = c a * (Real.exp (-lam a * x) * Real.exp (lam a * x)) := by rw [hexp]
@@ -72,12 +74,16 @@ lemma hasDerivAt_normalizedExpSum {α : Type*} [DecidableEq α]
     HasDerivAt (normalizedExpSum a s c lam)
       (expSum s (fun i => c i * (lam i - lam a)) (fun i => lam i - lam a) x) x := by
   unfold normalizedExpSum expSum
-  simpa only [mul_assoc, mul_left_comm, mul_comm] using
-    (hasDerivAt_const x (c a)).add
-      (HasDerivAt.fun_sum (u := s) (x := x) (fun i _hi =>
-        HasDerivAt.const_mul (c i)
-          ((Real.hasDerivAt_exp ((lam i - lam a) * x)).comp x
-            (hasDerivAt_const_mul (lam i - lam a)))))
+  have hsum : HasDerivAt (fun y => ∑ i ∈ s, c i * Real.exp ((lam i - lam a) * y))
+      (∑ i ∈ s, c i * (lam i - lam a) * Real.exp ((lam i - lam a) * x)) x := by
+    apply HasDerivAt.fun_sum
+    intro i _hi
+    convert HasDerivAt.const_mul (c i)
+      ((Real.hasDerivAt_exp ((lam i - lam a) * x)).comp x
+        (hasDerivAt_const_mul (lam i - lam a))) using 1 <;>
+      try ring
+  convert (hasDerivAt_const x (c a)).add hsum using 1 <;>
+    try ring
 
 /-- A nonzero finite sum of exponentials with distinct exponents has at most one fewer
 real zero than the number of terms. This is the manuscript's Lemma A.1 in finite-set form. -/
@@ -140,11 +146,10 @@ theorem expSum_zero_set_finite_and_ncard_le {α : Type*} [DecidableEq α]
             _ = (insert a s).card - 1 := by
               have hspos : 0 < s.card := hs.card_pos
               simp [ha]
-              omega
       · have hs0 : s = ∅ := Finset.not_nonempty_iff_eq_empty.mp hs
         subst s
         have hca : c a ≠ 0 := hc a (by simp)
-        have hset : {x | expSum ({a} : Finset α) c lam x = 0} = ∅ := by
+        have hset : {x | expSum (insert a (∅ : Finset α)) c lam x = 0} = ∅ := by
           ext x
           simp [expSum, hca]
         rw [hset]
