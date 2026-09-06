@@ -113,7 +113,8 @@ def test_gno_block(
 @pytest.mark.parametrize("reduction", ["sum", "mean"])
 @pytest.mark.parametrize("transform_type", ["linear", "nonlinear", "nonlinear_kernelonly"])
 @pytest.mark.parametrize("batch_size", [None, 1, 2])
-def test_gno_block_chunked_forward(reduction, transform_type, batch_size):
+@pytest.mark.parametrize("device", ["cpu"] + (["cuda"] if torch.cuda.is_available() else []))
+def test_gno_block_chunked_forward(reduction, transform_type, batch_size, device):
     torch.manual_seed(0)
     gno_block = GNOBlock(
         in_channels=in_channels,
@@ -126,11 +127,11 @@ def test_gno_block_chunked_forward(reduction, transform_type, batch_size):
         channel_mlp_layers=[16, 16],
         use_torch_scatter_reduce=False,
         use_open3d_neighbor_search=False,
-    )
-    input_geom = torch.rand(12, 2, requires_grad=True)
-    output_queries = torch.rand(9, 2, requires_grad=True)
+    ).to(device)
+    input_geom = torch.rand(12, 2, device=device, requires_grad=True)
+    output_queries = torch.rand(9, 2, device=device, requires_grad=True)
     shape = (12, in_channels) if batch_size is None else (batch_size, 12, in_channels)
-    f_y = torch.rand(shape, requires_grad=True)
+    f_y = torch.rand(shape, device=device, requires_grad=True)
 
     expected = gno_block(input_geom, output_queries, f_y=f_y)
     actual = gno_block.chunked_forward(
