@@ -8,6 +8,10 @@ on:
       - ".github/workflows/tmlr-lean-audit.yml"
   workflow_dispatch:
 
+concurrency:
+  group: tmlr-lean-audit
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
