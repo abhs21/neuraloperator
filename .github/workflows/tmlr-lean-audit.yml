@@ -17,6 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v5
+        with:
+          path: formal/tmlr_lean_audit/.lake/packages
+          key: tmlr-lean-v4321-packages
       - name: Bootstrap Lean and generate Lake manifest
         run: |
           curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
