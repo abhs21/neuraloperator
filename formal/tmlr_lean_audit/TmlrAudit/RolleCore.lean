@@ -13,7 +13,7 @@ theorem rootFinset_card_le_derivZeroFinset_add_one
     (hs : ∀ x ∈ s, f x = 0)
     (ht : ∀ x, f' x = 0 → x ∈ t) :
     s.card ≤ t.card + 1 := by
-  refine (Finset.card_le_sdiff_of_interleaved ?_).trans ?_
+  refine (Finset.card_le_sdiff_of_interleaved (s := s) (t := t) ?_).trans ?_
   · intro x hx y hy hxy _hgap
     obtain ⟨z, hzI, hdz⟩ :=
       exists_deriv_eq_zero hxy hf.continuousOn ((hs x hx).trans (hs y hy).symm)
