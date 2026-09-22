@@ -30,8 +30,7 @@ class BurgersOptConfig(OptimizationConfig):
     weight_decay: float = 1e-4
     eval_interval: int = 1
     mixed_precision: bool = False
-    # Full IEEE float32 avoids architecture-dependent TF32 rounding in PINO.
-    allow_tf32: bool = False
+    allow_tf32: bool = True
     scheduler: str = "ReduceLROnPlateau"  # Or 'CosineAnnealingLR' OR 'ReduceLROnPlateau'
     scheduler_patience: int = 100  # For ReduceLROnPlateau only
     step_size: int = 60

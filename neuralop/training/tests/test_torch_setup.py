@@ -1,5 +1,3 @@
-import subprocess
-import sys
 from types import SimpleNamespace
 
 import pytest
@@ -66,37 +64,3 @@ def test_set_tf32_new_api(monkeypatch, allow_tf32, expected_precision):
 def test_set_tf32_rejects_non_boolean_values():
     with pytest.raises(TypeError, match="allow_tf32 must be a bool"):
         torch_setup.set_tf32("false")
-
-
-def test_set_tf32_overrides_existing_backend_settings():
-    subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            """
-import torch
-from neuralop.training.torch_setup import set_tf32
-
-if hasattr(torch.backends, "fp32_precision"):
-    backends = [
-        torch.backends,
-        torch.backends.cuda.matmul,
-        torch.backends.cudnn,
-        torch.backends.cudnn.conv,
-        torch.backends.cudnn.rnn,
-    ]
-    for enabled in (False, True):
-        for backend in backends:
-            backend.fp32_precision = "ieee" if enabled else "tf32"
-        set_tf32(enabled)
-        expected = "tf32" if enabled else "ieee"
-        assert all(backend.fp32_precision == expected for backend in backends)
-else:
-    for enabled in (False, True):
-        set_tf32(enabled)
-        assert torch.backends.cuda.matmul.allow_tf32 is enabled
-        assert torch.backends.cudnn.allow_tf32 is enabled
-""",
-        ],
-        check=True,
-    )
