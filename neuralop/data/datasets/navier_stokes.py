@@ -54,10 +54,11 @@ class NavierStokesDataset(PTDataset):
         whether to download data if not present, by default True
     train_path : Union[Path, str], optional
         Path to the training data file. If provided, this path is used instead of the
-        default filename constructed from ``root_dir`` and ``train_resolution``.
+        default filename. Otherwise, both known archive filename orders are accepted.
     test_paths : List[Union[Path, str]], optional
         Paths to the test data files, in the same order as ``test_resolutions``. If
-        provided, these paths are used instead of the default filenames.
+        provided, these paths are used instead of the default filenames. Otherwise,
+        both known archive filename orders are accepted.
 
     Attributes
     ----------
@@ -108,19 +109,25 @@ class NavierStokesDataset(PTDataset):
                 res in available_resolutions
             ), f"Error: resolution {res} not available"
 
+        def dataset_path(split, resolution):
+            standard = root_dir / f"nsforcing_{split}_{resolution}.pt"
+            alternate = root_dir / f"nsforcing_{resolution}_{split}.pt"
+            if standard.exists() or not alternate.exists():
+                return standard
+            return alternate
+
         if download:
             files_to_download = []
-            already_downloaded_files = [x.name for x in root_dir.iterdir()]
             for res in resolutions:
                 needs_train = (
                     train_path is None
                     and res == train_resolution
-                    and f"nsforcing_train_{res}.pt" not in already_downloaded_files
+                    and not dataset_path("train", res).exists()
                 )
                 needs_test = (
                     test_paths is None
                     and res in test_resolutions
-                    and f"nsforcing_test_{res}.pt" not in already_downloaded_files
+                    and not dataset_path("test", res).exists()
                 )
                 if needs_train or needs_test:
                     files_to_download.append(f"nsforcing_{res}.tgz")
@@ -130,6 +137,11 @@ class NavierStokesDataset(PTDataset):
                     root=root_dir,
                     files_to_download=files_to_download,
                 )
+
+        if train_path is None:
+            train_path = dataset_path("train", train_resolution)
+        if test_paths is None:
+            test_paths = [dataset_path("test", res) for res in test_resolutions]
 
         # once downloaded/if files already exist, init PTDataset
         super().__init__(

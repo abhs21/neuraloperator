@@ -105,6 +105,40 @@ def test_NSExplicitPaths(tmp_path):
     assert len(dataset.test_dbs[128]) == 1
 
 
+@pytest.mark.parametrize("preexisting", [True, False])
+def test_NSAlternateArchiveNames(tmp_path, monkeypatch, preexisting):
+    data = {"x": torch.randn(2, 128, 128), "y": torch.randn(2, 128, 128)}
+    archive_names = ["nsforcing_128_train.pt", "nsforcing_128_test.pt"]
+    downloads = []
+
+    def write_archive_files():
+        for name in archive_names:
+            torch.save(data, tmp_path / name)
+
+    if preexisting:
+        write_archive_files()
+
+    def download(record_id, root, files_to_download):
+        downloads.extend(files_to_download)
+        write_archive_files()
+
+    monkeypatch.setattr(navier_stokes, "download_from_zenodo_record", download)
+    dataset = NavierStokesDataset(
+        root_dir=tmp_path,
+        n_train=2,
+        n_tests=[1],
+        batch_size=1,
+        test_batch_sizes=[1],
+        train_resolution=128,
+        test_resolutions=[128],
+        encode_output=False,
+    )
+
+    assert downloads == ([] if preexisting else ["nsforcing_128.tgz"])
+    assert len(dataset.train_db) == 2
+    assert len(dataset.test_dbs[128]) == 1
+
+
 @pytest.mark.parametrize("explicit_split", ["train", "test"])
 def test_NSPartialExplicitPaths(tmp_path, monkeypatch, explicit_split):
     data = {"x": torch.randn(2, 128, 128), "y": torch.randn(2, 128, 128)}
